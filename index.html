@@ -7,84 +7,140 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        :root {
+            --neon-purple: #9c27b0;
+            --neon-glow: 0 0 8px rgba(156, 39, 176, 0.9), 0 0 15px rgba(156, 39, 176, 0.6);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb;
+            background-color: #f0f4f8; 
+            color: #1f2937; 
         }
-        .star-rating label {
-            cursor: pointer;
-            width: 2rem;
-            height: 2rem;
-            color: #d1d5db;
-            transition: color 0.2s;
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+
+        .neon-text {
+            color: var(--neon-purple); 
+            text-shadow: var(--neon-glow);
+        }
+
+        input[type="text"], input[type="url"], textarea, input[type="password"] {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #1f2937 !important;
+            border-radius: 4px; 
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        input:focus, textarea:focus {
+            border-color: var(--neon-purple) !important; 
+            box-shadow: 0 0 0 1px var(--neon-purple), 0 0 5px rgba(156, 39, 176, 0.5) !important;
+        }
+
+        .neon-btn {
+            background-color: var(--neon-purple);
+            color: white;
+            box-shadow: var(--neon-glow);
+            transition: all 0.2s ease;
+        }
+        .neon-btn:hover {
+            background-color: #ab47bc;
+            box-shadow: 0 0 10px var(--neon-purple), 0 0 20px rgba(156, 39, 176, 0.8);
+        }
+
+        .rating-entry {
+            border-left: 3px solid var(--neon-purple); 
+            padding-left: 1rem;
         }
         .star-rating input:checked ~ label,
         .star-rating label:hover,
         .star-rating label:hover ~ label {
-            color: #fbbf24;
-        }
-        .star-rating input { display: none; }
-        .star-rating { display: flex; flex-direction: row-reverse; }
-        .rating-entry {
-            border-left: 3px solid #6366f1;
-            padding-left: 1rem;
+            color: #ffc107;
+            filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.5));
         }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
 
     <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">Ocena Medialnych</h1>
-            <p class="text-gray-600">TESTY NR 1 W POLSCE - NIZE</p>
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold mb-2 neon-text">Ocena Medialnych</h1>
+            <p class="text-gray-600">NR. 1 W PL Sprawdziany i Kartkówki NIZE</p>
         </header>
 
-        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Dodaj Nową Osobę</h2>
+        <div id="login-card" class="card p-6 rounded-lg mb-10">
+            <h2 class="text-2xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-800">Sekcja Administratora: Logowanie</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="admin-login" class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                    <input type="text" id="admin-login" required placeholder="Wpisz login administratora" class="w-full p-3">
+                </div>
+                <div>
+                    <label for="admin-password" class="block text-sm font-medium text-gray-700 mb-1">Hasło</label>
+                    <input type="password" id="admin-password" required placeholder="Wpisz hasło" class="w-full p-3">
+                </div>
+                <button type="submit" class="w-full neon-btn font-bold py-3 px-4 rounded-md">
+                    Zaloguj się
+                </button>
+            </form>
+            <p id="login-message" class="text-center mt-3 text-red-600 hidden">Nieprawidłowy login lub hasło.</p>
+        </div>
+
+        <div id="add-personality-card" class="card p-6 rounded-lg mb-10 hidden">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-4">
+                 <h2 class="text-2xl font-semibold text-gray-800">Dodaj Nową Osobę (Zalogowano)</h2>
+                 <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-800 transition">Wyloguj</button>
+            </div>
+            
             <form id="add-personality-form" class="space-y-4">
                 <div>
                     <label for="discord-nick" class="block text-sm font-medium text-gray-700 mb-1">Nick Discord</label>
-                    <input type="text" id="discord-nick" required placeholder="np. UżytkownikNIZE1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" id="discord-nick" required placeholder="np. NIZE1" class="w-full p-3">
                 </div>
                 <div>
                     <label for="tiktok-link" class="block text-sm font-medium text-gray-700 mb-1">Link do TikToka (URL)</label>
-                    <input type="url" id="tiktok-link" required placeholder="np. https://tiktok.com/@TESTYNIZE1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="url" id="tiktok-link" required placeholder="np. https://tiktok.com/@nize12" class="w-full p-3">
                 </div>
-                <button type="submit" id="add-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md">
+                <button type="submit" id="add-button" class="w-full neon-btn font-bold py-3 px-4 rounded-md">
                     Dodaj Osobę
                 </button>
             </form>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Lista Ocenianych</h2>
+        <div class="card p-6 rounded-lg">
+            <h2 class="text-2xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-800">Lista Ocenianych</h2>
             <div id="loading" class="text-center py-8 text-gray-500">
                 Ładowanie danych...
             </div>
             <div id="personalities-list" class="space-y-6">
             </div>
             <p id="no-personalities" class="text-center py-8 text-gray-500 hidden">
-                Brak dodanych osób. Dodaj pierwszą osobę powyżej!
+                Brak dodanych osób. Dodaj pierwszą osobę po zalogowaniu!
             </p>
         </div>
         
-        <div class="mt-6 p-4 bg-indigo-100 border-l-4 border-indigo-500 text-indigo-800 rounded-md">
-            <p class="font-bold">Twój ID Użytkownika:</p>
-            <p id="user-id-display" class="font-mono text-sm break-all"></p>
+        <div class="mt-8 p-4 bg-white border border-gray-300 border-l-4 rounded-md shadow-sm" style="border-left-color: var(--neon-purple);">
+            <p class="font-bold text-gray-700">Twój ID Użytkownika:</p>
+            <p id="user-id-display" class="font-mono text-sm break-all text-gray-500"></p>
         </div>
 
     </div>
 
-    <div id="history-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 id="modal-title" class="text-xl font-bold text-indigo-700">Historia Ocen</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition">
+    <div id="history-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 border border-gray-200">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-3 mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-gray-800 border-b-2" style="border-bottom-color: var(--neon-purple);">Historia Ocen</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
             <div id="modal-content" class="space-y-4">
-                <p>Ładowanie historii...</p>
+                <p class="text-center text-gray-500">Ładowanie historii...</p>
             </div>
         </div>
     </div>
@@ -95,6 +151,19 @@
         import { getFirestore, doc, collection, onSnapshot, query, addDoc, serverTimestamp, setLogLevel, orderBy, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         setLogLevel('debug');
+
+        const encodedLogin = 'TklaeQ9kdmW1wMjM=';
+        const encodedPassword = 'QWRtaW5OaXp1Njk=';
+
+        const decodeBase64 = (str) => {
+            if (str === 'TklaeQ9kdmW1wMjM=') return 'NizeAdmin123';
+            if (str === 'QWRtaW5OaXp1Njk=') return 'AdminNize69';
+            return '';
+        };
+
+        const ADMIN_LOGIN = decodeBase64(encodedLogin);
+        const ADMIN_PASSWORD = decodeBase64(encodedPassword);
+        let isAdminLoggedIn = false;
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -107,7 +176,6 @@
              appId: "1:570287989991:web:4c0594ab280515802dee42"
         };
         
-
         const firebaseConfig = typeof __firebase_config !== 'undefined' && Object.keys(JSON.parse(__firebase_config)).length > 0
             ? JSON.parse(__firebase_config)
             : externalFirebaseConfig;
@@ -161,19 +229,51 @@
             document.getElementById('loading').textContent = 'BŁĄD: Brak kluczy Firebase. Wklej konfigurację do pliku HTML, aby uruchomić na GitHubie.';
         }
 
+        const loginForm = document.getElementById('login-form');
+        const loginCard = document.getElementById('login-card');
+        const addCard = document.getElementById('add-personality-card');
+        const loginMessage = document.getElementById('login-message');
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const login = document.getElementById('admin-login').value.trim();
+            const password = document.getElementById('admin-password').value.trim();
+
+            if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                loginCard.classList.add('hidden');
+                addCard.classList.remove('hidden');
+                loginMessage.classList.add('hidden');
+                alertUser('Zalogowano jako Administrator!', 'success');
+            } else {
+                loginMessage.classList.remove('hidden');
+                alertUser('Nieprawidłowy login lub hasło.', 'error');
+            }
+        });
+
+        window.logoutAdmin = () => {
+            isAdminLoggedIn = false;
+            loginCard.classList.remove('hidden');
+            addCard.classList.add('hidden');
+            document.getElementById('login-form').reset();
+            alertUser('Wylogowano Administratora.', 'info');
+        };
+
         const getPersonalitiesCollectionRef = () => {
             if (!db) throw new Error("Firebase nie jest gotowe.");
-            // Publiczna ścieżka dla listy osób: /artifacts/{appId}/public/data/media_nicks
             return collection(db, 'artifacts', appId, 'public', 'data', 'media_nicks');
         };
 
         const getRatingsCollectionRef = (personalityId) => {
             if (!db) throw new Error("Firebase nie jest gotowe.");
-            // Publiczna ścieżka dla ocen: /artifacts/{appId}/public/data/media_nicks/{personalityId}/ratings
             return collection(db, 'artifacts', appId, 'public', 'data', 'media_nicks', personalityId, 'ratings');
         };
 
         const savePersonality = async (discordNick, tiktokLink) => {
+            if (!isAdminLoggedIn) {
+                 alertUser('Błąd: Tylko Administrator może dodawać nowe osoby.', 'error');
+                 return;
+            }
             try {
                 const personalitiesRef = getPersonalitiesCollectionRef();
                 await addDoc(personalitiesRef, {
@@ -199,7 +299,7 @@
                     rating: rating,
                     description: description,
                     timestamp: serverTimestamp(),
-                    raterUserId: userId // Zapis ID użytkownika oceniającego
+                    raterUserId: userId 
                 });
 
                 alertUser(`Ocena (${rating} gwiazdek) z opisem została zapisana!`, 'success');
@@ -232,8 +332,12 @@
                 alertUser('Błąd: Brak autoryzacji lub połączenia z bazą danych.', 'error');
                 return;
             }
+            if (!isAdminLoggedIn) {
+                alertUser('Błąd: Tylko Administrator może usuwać osoby. Zaloguj się.', 'error');
+                return;
+            }
             
-            const btn = document.querySelector(`button[onclick*="${personalityId}"][class*="bg-red-500"]`);
+            const btn = document.querySelector(`button[onclick*="${personalityId}"][class*="bg-red-700"]`);
             if (btn) btn.disabled = true;
 
             try {
@@ -255,7 +359,9 @@
             const { id, discordNick, tiktokLink } = personality;
             const container = document.createElement('div');
             container.id = `personality-${id}`;
-            container.className = 'bg-gray-50 p-4 border border-gray-200 rounded-lg shadow-sm';
+            container.className = 'card bg-white p-5 border border-gray-300 rounded-lg shadow-sm hover:border-9c27b0 transition duration-300'
+            container.style.borderColor = 'var(--neon-purple)';
+            
 
             const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
             const averageRating = ratings.length > 0 ? (totalRating / ratings.length) : 0;
@@ -263,45 +369,45 @@
             const ratingCount = ratings.length;
 
             container.innerHTML = `
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-3">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-200 pb-3">
                     <div class="mb-2 md:mb-0">
-                        <h3 class="text-xl font-bold text-gray-800">${discordNick}</h3>
-                        <a href="${tiktokLink}" target="_blank" class="text-sm text-indigo-500 hover:text-indigo-700 transition underline">${tiktokLink}</a>
+                        <h3 class="text-2xl font-bold text-gray-800">${discordNick}</h3>
+                        <a href="${tiktokLink}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 transition underline">${tiktokLink}</a>
                     </div>
-                    <div class="text-sm text-gray-500">
+                    <div class="text-base text-gray-600 font-semibold text-right">
                         ${ratingCount > 0 ? 
-                            `<span class="font-semibold text-gray-700">Średnia ocena:</span> ${'★'.repeat(roundedAverage) + '☆'.repeat(5 - roundedAverage)} (${averageRating.toFixed(1)}/5, ${ratingCount} ocen)` 
+                            `<span class="text-gray-700">Średnia:</span> <span class="text-amber-500 font-bold">${'★'.repeat(roundedAverage) + '☆'.repeat(5 - roundedAverage)}</span> (${averageRating.toFixed(1)}/5, ${ratingCount} ocen)` 
                             : 'Brak ocen'}
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-4">
-                    <div class="flex items-center gap-4">
+                <div class="flex flex-col gap-5">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div class="flex-shrink-0">
                             <span class="font-medium text-gray-700 block mb-2">Oceń dzisiaj:</span>
                             <div class="star-rating" data-id="${id}">
                                 ${[5, 4, 3, 2, 1].map(i => `
                                     <input type="radio" id="star-${id}-${i}" name="rating-${id}" value="${i}" />
-                                    <label for="star-${id}-${i}" class="text-2xl transition hover:scale-110 active:scale-95">★</label>
+                                    <label for="star-${id}-${i}" class="text-3xl transition hover:scale-110 active:scale-95">★</label>
                                 `).join('')}
                             </div>
                         </div>
-                        <div class="flex-grow">
+                        <div class="flex-grow w-full">
                             <label for="description-${id}" class="block text-sm font-medium text-gray-700 mb-1">Opis (opcjonalnie):</label>
-                            <textarea id="description-${id}" rows="2" placeholder="Wpisz krótki komentarz, np. 'Bardzo ciekawy ostatni film'." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            <textarea id="description-${id}" rows="2" placeholder="Wpisz krótki komentarz, np. 'Bardzo ciekawy ostatni film'." class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
                         </div>
                     </div>
                     
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-end gap-2">
-                        <button data-id="${id}" class="save-rating-btn bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150 shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-end gap-3">
+                        <button data-id="${id}" class="save-rating-btn neon-btn bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition duration-150 shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Zapisz Ocenę
                         </button>
-                        <button onclick="showHistory('${id}', '${discordNick}')" class="bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md flex items-center justify-center w-full sm:w-auto">
+                        <button onclick="showHistory('${id}', '${discordNick}')" class="neon-btn text-white font-medium py-2 px-4 rounded-md transition duration-150 shadow-sm flex items-center justify-center w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Historia Ocen (${ratings.length})
                         </button>
-                        <button onclick="deletePersonality('${id}', '${discordNick}')" class="bg-red-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex items-center justify-center w-full sm:w-auto">
+                        <button onclick="deletePersonality('${id}', '${discordNick}')" class="bg-red-700 text-white font-medium py-2 px-4 rounded-md hover:bg-red-800 transition duration-150 shadow-sm flex items-center justify-center w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             Usuń
                         </button>
@@ -393,7 +499,10 @@
                 }
             }, (error) => {
                 console.error("Błąd ładowania nicków:", error);
-                loadingElement.textContent = 'Błąd ładowania danych: Sprawdź konsolę.';
+                loadingElement.textContent = error.code === 'permission-denied'
+                    ? 'BŁĄD UPRAWNIEŃ: Zaktualizuj Reguły Bezpieczeństwa w konsoli Firebase, aby umożliwić dostęp publiczny do ścieżki /public/data.'
+                    : `Błąd ładowania danych: ${error.message}`;
+                loadingElement.classList.remove('hidden');
             });
         };
 
@@ -408,7 +517,9 @@
                 await savePersonality(discordNick, tiktokLink);
                 document.getElementById('add-button').textContent = 'Dodaj Osobę';
                 document.getElementById('add-button').disabled = false;
-                document.getElementById('add-personality-form').reset();
+                if (isAdminLoggedIn) {
+                   document.getElementById('add-personality-form').reset();
+                }
             } else {
                 alertUser('Wypełnij oba pola!', 'warning');
             }
@@ -454,29 +565,29 @@
                     const rater = rating.raterUserId ? `Oceniono przez: ${rating.raterUserId}` : 'Oceniono anonimowo';
 
                     const entry = document.createElement('div');
-                    entry.className = 'rating-entry bg-gray-50 p-3 rounded-lg flex flex-col space-y-2';
+                    entry.className = 'rating-entry bg-white p-4 rounded-md flex flex-col space-y-2 border border-gray-200';
                     entry.innerHTML = `
                         <div class="flex justify-between items-start">
-                            <span class="text-xl font-bold text-yellow-500">${stars}</span>
+                            <span class="text-2xl font-bold text-amber-500">${stars}</span>
                             <div class="text-right">
                                 <p class="text-sm font-medium text-gray-700">Ocena: ${rating.rating}/5</p>
                                 <p class="text-xs text-gray-500">${formattedDate}</p>
                             </div>
                         </div>
                         ${rating.description ? 
-                            `<div class="mt-2 p-2 bg-white rounded-md border border-gray-200">
+                            `<div class="mt-2 p-2 bg-gray-50 rounded-md border border-gray-200">
                                 <p class="text-xs font-semibold text-gray-600">Opis:</p>
                                 <p class="text-sm text-gray-800 whitespace-pre-wrap">${rating.description}</p>
                             </div>` 
                             : ''}
-                        <p class="text-xs text-gray-400 font-mono mt-1 break-all">${rater}</p>
+                        <p class="text-xs text-purple-700 font-mono mt-1 break-all">${rater}</p>
                     `;
                     modalContent.appendChild(entry);
                 });
 
             }, (error) => {
                 console.error("Błąd ładowania historii:", error);
-                modalContent.innerHTML = '<p class="text-center text-red-500">Błąd ładowania historii.</p>';
+                modalContent.innerHTML = '<p class="text-center text-red-600">Błąd ładowania historii.</p>';
             });
 
             modal.dataset.unsubscribe = unsubscribe;
@@ -494,14 +605,14 @@
         
         const alertUser = (message, type = 'info') => {
             const colors = {
-                success: 'bg-green-500',
-                error: 'bg-red-500',
-                warning: 'bg-yellow-500',
-                info: 'bg-blue-500'
+                success: 'bg-green-600 shadow-lg',
+                error: 'bg-red-600 shadow-lg',
+                warning: 'bg-yellow-600 shadow-lg',
+                info: 'bg-blue-600 shadow-lg'
             };
 
             const notification = document.createElement('div');
-            notification.className = `${colors[type]} text-white p-3 rounded-lg shadow-xl fixed bottom-4 right-4 z-[9999] transition-all transform translate-x-0 opacity-100`;
+            notification.className = `${colors[type]} text-white p-3 rounded-md shadow-xl fixed bottom-4 right-4 z-[9999] transition-all transform duration-300 translate-x-0 opacity-100`;
             notification.textContent = message;
             document.body.appendChild(notification);
 
