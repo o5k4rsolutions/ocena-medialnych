@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Oceniania Medialnych</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .star-rating label {
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            color: #d1d5db;
+            transition: color 0.2s;
+        }
+        .star-rating input:checked ~ label,
+        .star-rating label:hover,
+        .star-rating label:hover ~ label {
+            color: #fbbf24;
+        }
+        .star-rating input { display: none; }
+        .star-rating { display: flex; flex-direction: row-reverse; }
+        .rating-entry {
+            border-left: 3px solid #6366f1;
+            padding-left: 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">Ocena Medialnych</h1>
+            <p class="text-gray-600">Dane są zapisywane w czasie rzeczywistym.</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Dodaj Nową Osobę</h2>
+            <form id="add-personality-form" class="space-y-4">
+                <div>
+                    <label for="discord-nick" class="block text-sm font-medium text-gray-700 mb-1">Nick Discord</label>
+                    <input type="text" id="discord-nick" required placeholder="np. Kociara77" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="tiktok-link" class="block text-sm font-medium text-gray-700 mb-1">Link do TikToka (URL)</label>
+                    <input type="url" id="tiktok-link" required placeholder="np. https://tiktok.com/@kociara77" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <button type="submit" id="add-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md">
+                    Dodaj Osobę
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Lista Ocenianych</h2>
+            <div id="loading" class="text-center py-8 text-gray-500">
+                Ładowanie danych...
+            </div>
+            <div id="personalities-list" class="space-y-6">
+            </div>
+            <p id="no-personalities" class="text-center py-8 text-gray-500 hidden">
+                Brak dodanych osób. Dodaj pierwszą osobę powyżej!
+            </p>
+        </div>
+        
+        <div class="mt-6 p-4 bg-indigo-100 border-l-4 border-indigo-500 text-indigo-800 rounded-md">
+            <p class="font-bold">Twój ID Użytkownika:</p>
+            <p id="user-id-display" class="font-mono text-sm break-all"></p>
+        </div>
+
+    </div>
+
+    <div id="history-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-indigo-700">Historia Ocen</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="modal-content" class="space-y-4">
+                <p>Ładowanie historii...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, query, addDoc, serverTimestamp, setLogLevel, orderBy, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('debug');
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            const authenticate = async () => {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Zalogowano z custom tokenem.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Zalogowano anonimowo.");
+                    }
+                } catch (error) {
+                    console.error("Błąd autentykacji:", error);
+                }
+            };
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    console.log("Stan autentykacji gotowy. User ID:", userId);
+                    document.getElementById('user-id-display').textContent = userId;
+                    loadPersonalities();
+                } else {
+                    userId = null;
+                    isAuthReady = true;
+                    console.log("Autentykacja nie powiodła się lub użytkownik wylogowany. Nie wczytano prywatnych danych.");
+                    document.getElementById('user-id-display').textContent = 'Błąd autentykacji. Brak ID.';
+                    document.getElementById('loading').textContent = 'Wymagane uprawnienia. Błąd autentykacji.';
+                }
+            });
+
+            authenticate();
+        } else {
+            console.error("Brak konfiguracji Firebase.");
+            document.getElementById('loading').textContent = 'Błąd: Brak konfiguracji Firebase.';
+        }
+
+        const getPersonalitiesCollectionRef = () => {
+            if (!db || !userId) throw new Error("Firebase lub User ID nie jest gotowe.");
+            return collection(db, 'artifacts', appId, 'users', userId, 'media_nicks');
+        };
+
+        const getRatingsCollectionRef = (personalityId) => {
+            if (!db || !userId) throw new Error("Firebase lub User ID nie jest gotowe.");
+            return collection(db, 'artifacts', appId, 'users', userId, 'media_nicks', personalityId, 'ratings');
+        };
+
+        const savePersonality = async (discordNick, tiktokLink) => {
+            try {
+                const personalitiesRef = getPersonalitiesCollectionRef();
+                await addDoc(personalitiesRef, {
+                    discordNick: discordNick,
+                    tiktokLink: tiktokLink,
+                    createdAt: serverTimestamp()
+                });
+                console.log("Dodano nowy nick:", discordNick);
+            } catch (e) {
+                console.error("Błąd podczas dodawania nicka: ", e);
+                alertUser('Wystąpił błąd podczas dodawania nicka.', 'error');
+            }
+        };
+
+        const saveRating = async (personalityId, rating) => {
+            try {
+                const ratingsRef = getRatingsCollectionRef(personalityId);
+                await addDoc(ratingsRef, {
+                    rating: rating,
+                    timestamp: serverTimestamp()
+                });
+
+                alertUser('Ocena (' + rating + ' gwiazdek) została zapisana!', 'success');
+            } catch (e) {
+                console.error("Błąd podczas zapisywania oceny: ", e);
+                alertUser('Wystąpił błąd podczas zapisywania oceny.', 'error');
+            }
+        };
+        
+        const deleteRatingsCollection = async (personalityId) => {
+            const ratingsRef = getRatingsCollectionRef(personalityId);
+            const snapshot = await getDocs(ratingsRef);
+            
+            const batch = writeBatch(db);
+
+            snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+
+            if (snapshot.size > 0) {
+                await batch.commit();
+                console.log(`Usunięto ${snapshot.size} ocen dla nicka: ${personalityId}.`);
+            } else {
+                console.log(`Brak ocen do usunięcia dla nicka: ${personalityId}.`);
+            }
+        };
+
+        window.deletePersonality = async (personalityId, discordNick) => {
+            if (!db || !userId) {
+                alertUser('Błąd: Brak autoryzacji lub połączenia z bazą danych.', 'error');
+                return;
+            }
+            
+            const btn = document.querySelector(`button[onclick*="${personalityId}"][class*="bg-red-500"]`);
+            if (btn) btn.disabled = true;
+
+            try {
+                await deleteRatingsCollection(personalityId);
+
+                const personalityDocRef = doc(getPersonalitiesCollectionRef(), personalityId);
+                await deleteDoc(personalityDocRef);
+                
+                alertUser(`Nick "${discordNick}" został usunięty pomyślnie!`, 'success');
+            } catch (e) {
+                console.error("Błąd podczas usuwania nicka: ", e);
+                alertUser('Wystąpił błąd podczas usuwania nicka.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
+
+        const renderPersonalityItem = (personality, ratings) => {
+            const { id, discordNick, tiktokLink } = personality;
+            const container = document.createElement('div');
+            container.id = `personality-${id}`;
+            container.className = 'bg-gray-50 p-4 border border-gray-200 rounded-lg shadow-sm';
+
+            const latestRating = ratings.length > 0 ? ratings.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis())[0] : null;
+
+            container.innerHTML = `
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-3">
+                    <div class="mb-2 md:mb-0">
+                        <h3 class="text-xl font-bold text-gray-800">${discordNick}</h3>
+                        <a href="${tiktokLink}" target="_blank" class="text-sm text-indigo-500 hover:text-indigo-700 transition underline">${tiktokLink}</a>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        ${latestRating ? `<span class="font-semibold text-gray-700">Ostatnia ocena:</span> ${'★'.repeat(latestRating.rating) + '☆'.repeat(5 - latestRating.rating)}` : 'Brak ocen'}
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex-shrink-0">
+                        <span class="font-medium text-gray-700 block mb-2">Oceń dzisiaj:</span>
+                        <div class="star-rating" data-id="${id}">
+                            ${[5, 4, 3, 2, 1].map(i => `
+                                <input type="radio" id="star-${id}-${i}" name="rating-${id}" value="${i}" />
+                                <label for="star-${id}-${i}" class="text-2xl transition hover:scale-110 active:scale-95">★</label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2 flex-shrink-0">
+                        <button data-id="${id}" class="save-rating-btn bg-green-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-green-600 transition duration-150 shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Zapisz Ocenę
+                        </button>
+                        <button onclick="showHistory('${id}', '${discordNick}')" class="bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Historia Ocen (${ratings.length})
+                        </button>
+                        <button onclick="deletePersonality('${id}', '${discordNick}')" class="bg-red-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Usuń
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const saveBtn = container.querySelector('.save-rating-btn');
+            const ratingInputs = container.querySelectorAll(`input[name="rating-${id}"]`);
+
+            ratingInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    saveBtn.dataset.rating = input.value;
+                    saveBtn.disabled = false;
+                });
+            });
+
+            saveBtn.addEventListener('click', () => {
+                const rating = parseInt(saveBtn.dataset.rating);
+                if (rating >= 1 && rating <= 5) {
+                    saveRating(id, rating);
+                    saveBtn.disabled = true;
+                }
+            });
+
+            return container;
+        };
+
+        const loadPersonalities = () => {
+            if (!isAuthReady || !userId) {
+                console.log("Próba ładowania danych przed gotowością autentykacji.");
+                return;
+            }
+
+            const personalitiesRef = getPersonalitiesCollectionRef();
+            const listContainer = document.getElementById('personalities-list');
+            const loadingElement = document.getElementById('loading');
+            const noPersonalitiesElement = document.getElementById('no-personalities');
+
+            listContainer.innerHTML = '';
+            loadingElement.classList.remove('hidden');
+
+            onSnapshot(personalitiesRef, (snapshot) => {
+                loadingElement.classList.add('hidden');
+                const personalitiesData = [];
+                snapshot.forEach(doc => {
+                    personalitiesData.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (personalitiesData.length === 0) {
+                    listContainer.innerHTML = '';
+                    noPersonalitiesElement.classList.remove('hidden');
+                } else {
+                    noPersonalitiesElement.classList.add('hidden');
+
+                    personalitiesData.forEach(personality => {
+                        const ratingsRef = query(getRatingsCollectionRef(personality.id));
+                        onSnapshot(ratingsRef, (ratingsSnapshot) => {
+                            const ratings = [];
+                            ratingsSnapshot.forEach(ratingDoc => {
+                                ratings.push({ id: ratingDoc.id, ...ratingDoc.data() });
+                            });
+
+                            let itemContainer = document.getElementById(`personality-${personality.id}`);
+                            if (itemContainer) {
+                                itemContainer.remove();
+                            }
+                            const newItem = renderPersonalityItem(personality, ratings);
+                            listContainer.appendChild(newItem);
+                        }, (error) => {
+                            console.error("Błąd ładowania ocen dla", personality.discordNick, ":", error);
+                        });
+                    });
+                }
+            }, (error) => {
+                console.error("Błąd ładowania nicków:", error);
+                loadingElement.textContent = 'Błąd ładowania danych: Sprawdź konsolę.';
+            });
+        };
+
+        document.getElementById('add-personality-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const discordNick = document.getElementById('discord-nick').value.trim();
+            const tiktokLink = document.getElementById('tiktok-link').value.trim();
+
+            if (discordNick && tiktokLink) {
+                document.getElementById('add-button').textContent = 'Dodawanie...';
+                document.getElementById('add-button').disabled = true;
+                await savePersonality(discordNick, tiktokLink);
+                document.getElementById('add-button').textContent = 'Dodaj Osobę';
+                document.getElementById('add-button').disabled = false;
+                document.getElementById('add-personality-form').reset();
+            } else {
+                alertUser('Wypełnij oba pola!', 'warning');
+            }
+        });
+
+        window.showHistory = (personalityId, discordNick) => {
+            const modal = document.getElementById('history-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalContent = document.getElementById('modal-content');
+
+            modalTitle.textContent = `Historia Ocen: ${discordNick}`;
+            modalContent.innerHTML = '<p class="text-center text-gray-500">Ładowanie historii...</p>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const ratingsRef = query(getRatingsCollectionRef(personalityId), orderBy('timestamp', 'desc'));
+
+            const unsubscribe = onSnapshot(ratingsRef, (snapshot) => {
+                const ratings = [];
+                snapshot.forEach(doc => {
+                    ratings.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (ratings.length === 0) {
+                    modalContent.innerHTML = '<p class="text-center text-gray-500">Brak zapisanych ocen.</p>';
+                    return;
+                }
+
+                modalContent.innerHTML = '';
+                ratings.forEach(rating => {
+                    const date = rating.timestamp ? rating.timestamp.toDate() : new Date();
+                    const formattedDate = date.toLocaleString('pl-PL', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+
+                    const stars = '★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating);
+
+                    const entry = document.createElement('div');
+                    entry.className = 'rating-entry bg-gray-50 p-3 rounded-lg flex justify-between items-center';
+                    entry.innerHTML = `
+                        <div>
+                            <span class="text-xl font-bold text-yellow-500">${stars}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-700">Ocena: ${rating.rating}/5</p>
+                            <p class="text-xs text-gray-500">${formattedDate}</p>
+                        </div>
+                    `;
+                    modalContent.appendChild(entry);
+                });
+
+            }, (error) => {
+                console.error("Błąd ładowania historii:", error);
+                modalContent.innerHTML = '<p class="text-center text-red-500">Błąd ładowania historii.</p>';
+            });
+
+            modal.dataset.unsubscribe = unsubscribe;
+        };
+
+        window.closeModal = () => {
+            const modal = document.getElementById('history-modal');
+            const unsubscribe = modal.dataset.unsubscribe;
+            if (unsubscribe && typeof unsubscribe === 'function') {
+                unsubscribe();
+            }
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+        
+        const alertUser = (message, type = 'info') => {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `${colors[type]} text-white p-3 rounded-lg shadow-xl fixed bottom-4 right-4 z-[9999] transition-all transform translate-x-0 opacity-100`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-full');
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, 3000);
+        };
+    </script>
+</body>
+</html>
