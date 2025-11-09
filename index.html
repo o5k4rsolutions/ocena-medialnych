@@ -69,19 +69,20 @@
             cursor: pointer;
             transition: color 0.2s, transform 0.1s;
         }
-        .star-rating .star:hover {
-            transform: scale(1.1);
-        }
-        .star-rating:hover .star {
-            color: #ffc107;
-            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5), 0 0 6px #ffc107;
-        }
+        
         .star-rating .star.selected {
             color: #ffc107; 
             text-shadow: 0 0 3px rgba(255, 193, 7, 0.5), 0 0 6px #ffc107;
         }
-        .star-rating .star:not(.selected) ~ .star {
-             color: #ccc; 
+        
+        .star-rating .star:hover {
+            transform: scale(1.1);
+            color: #ffc107;
+        }
+        
+        .star-rating .star:hover ~ .star:not(.selected) {
+             color: #ccc;
+             transform: none;
              text-shadow: 0 0 1px #888;
         }
 
@@ -384,8 +385,9 @@
             const stars = container.querySelectorAll('.star');
             const saveBtn = container.querySelector('.save-rating-btn');
             
-            stars.forEach((s, index) => {
-                if (index < ratingValue) {
+            stars.forEach((s) => {
+                const sValue = parseInt(s.dataset.value);
+                if (sValue <= ratingValue) {
                     s.classList.add('selected');
                 } else {
                     s.classList.remove('selected');
@@ -407,7 +409,7 @@
 
             const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
             const averageRating = ratings.length > 0 ? (totalRating / ratings.length) : 0;
-            const roundedAverage = Math.round(averageRating);
+            const roundedAverage = ratings.length > 0 ? Math.round(averageRating) : 0;
             const ratingCount = ratings.length;
 
             container.innerHTML = `
