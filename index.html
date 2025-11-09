@@ -162,13 +162,15 @@
         }
 
         const getPersonalitiesCollectionRef = () => {
-            if (!db || !userId) throw new Error("Firebase lub User ID nie jest gotowe.");
-            return collection(db, 'artifacts', appId, 'users', userId, 'media_nicks');
+            if (!db) throw new Error("Firebase nie jest gotowe.");
+            // Publiczna ścieżka dla listy osób: /artifacts/{appId}/public/data/media_nicks
+            return collection(db, 'artifacts', appId, 'public', 'data', 'media_nicks');
         };
 
         const getRatingsCollectionRef = (personalityId) => {
-            if (!db || !userId) throw new Error("Firebase lub User ID nie jest gotowe.");
-            return collection(db, 'artifacts', appId, 'users', userId, 'media_nicks', personalityId, 'ratings');
+            if (!db) throw new Error("Firebase nie jest gotowe.");
+            // Publiczna ścieżka dla ocen: /artifacts/{appId}/public/data/media_nicks/{personalityId}/ratings
+            return collection(db, 'artifacts', appId, 'public', 'data', 'media_nicks', personalityId, 'ratings');
         };
 
         const savePersonality = async (discordNick, tiktokLink) => {
@@ -187,12 +189,17 @@
         };
 
         const saveRating = async (personalityId, rating, description) => {
+            if (!userId) {
+                alertUser('Błąd autentykacji. Nie można zapisać oceny.', 'error');
+                return;
+            }
             try {
                 const ratingsRef = getRatingsCollectionRef(personalityId);
                 await addDoc(ratingsRef, {
                     rating: rating,
                     description: description,
-                    timestamp: serverTimestamp()
+                    timestamp: serverTimestamp(),
+                    raterUserId: userId // Zapis ID użytkownika oceniającego
                 });
 
                 alertUser(`Ocena (${rating} gwiazdek) z opisem została zapisana!`, 'success');
@@ -221,7 +228,7 @@
         };
 
         window.deletePersonality = async (personalityId, discordNick) => {
-            if (!db || !userId) {
+            if (!db) {
                 alertUser('Błąd: Brak autoryzacji lub połączenia z bazą danych.', 'error');
                 return;
             }
@@ -250,7 +257,10 @@
             container.id = `personality-${id}`;
             container.className = 'bg-gray-50 p-4 border border-gray-200 rounded-lg shadow-sm';
 
-            const latestRating = ratings.length > 0 ? ratings.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis())[0] : null;
+            const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
+            const averageRating = ratings.length > 0 ? (totalRating / ratings.length) : 0;
+            const roundedAverage = Math.round(averageRating);
+            const ratingCount = ratings.length;
 
             container.innerHTML = `
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-3">
@@ -259,7 +269,9 @@
                         <a href="${tiktokLink}" target="_blank" class="text-sm text-indigo-500 hover:text-indigo-700 transition underline">${tiktokLink}</a>
                     </div>
                     <div class="text-sm text-gray-500">
-                        ${latestRating ? `<span class="font-semibold text-gray-700">Ostatnia ocena:</span> ${'★'.repeat(latestRating.rating) + '☆'.repeat(5 - latestRating.rating)}` : 'Brak ocen'}
+                        ${ratingCount > 0 ? 
+                            `<span class="font-semibold text-gray-700">Średnia ocena:</span> ${'★'.repeat(roundedAverage) + '☆'.repeat(5 - roundedAverage)} (${averageRating.toFixed(1)}/5, ${ratingCount} ocen)` 
+                            : 'Brak ocen'}
                     </div>
                 </div>
 
@@ -329,7 +341,7 @@
         };
 
         const loadPersonalities = () => {
-            if (!isAuthReady || !userId) {
+            if (!isAuthReady) {
                 console.log("Próba ładowania danych przed gotowością autentykacji.");
                 return;
             }
@@ -439,6 +451,7 @@
                     });
 
                     const stars = '★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating);
+                    const rater = rating.raterUserId ? `Oceniono przez: ${rating.raterUserId}` : 'Oceniono anonimowo';
 
                     const entry = document.createElement('div');
                     entry.className = 'rating-entry bg-gray-50 p-3 rounded-lg flex flex-col space-y-2';
@@ -456,6 +469,7 @@
                                 <p class="text-sm text-gray-800 whitespace-pre-wrap">${rating.description}</p>
                             </div>` 
                             : ''}
+                        <p class="text-xs text-gray-400 font-mono mt-1 break-all">${rater}</p>
                     `;
                     modalContent.appendChild(entry);
                 });
