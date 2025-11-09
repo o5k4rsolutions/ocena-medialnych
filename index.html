@@ -24,6 +24,11 @@
             border: 1px solid #e2e8f0; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
         }
+        
+        .neon-border {
+            border: 2px solid var(--neon-purple);
+            box-shadow: var(--neon-glow), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
         .neon-text {
             color: var(--neon-purple); 
@@ -57,12 +62,29 @@
             border-left: 3px solid var(--neon-purple); 
             padding-left: 1rem;
         }
-        .star-rating input:checked ~ label,
-        .star-rating label:hover,
-        .star-rating label:hover ~ label {
-            color: #ffc107;
-            filter: drop-shadow(0 0 3px rgba(255, 193, 7, 0.5));
+
+        .star-rating .star {
+            color: #ccc; 
+            text-shadow: 0 0 1px #888;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.1s;
         }
+        .star-rating .star:hover {
+            transform: scale(1.1);
+        }
+        .star-rating:hover .star {
+            color: #ffc107;
+            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5), 0 0 6px #ffc107;
+        }
+        .star-rating .star.selected {
+            color: #ffc107; 
+            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5), 0 0 6px #ffc107;
+        }
+        .star-rating .star:not(.selected) ~ .star {
+             color: #ccc; 
+             text-shadow: 0 0 1px #888;
+        }
+
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -70,10 +92,10 @@
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-10">
             <h1 class="text-5xl font-extrabold mb-2 neon-text">Ocena Medialnych</h1>
-            <p class="text-gray-600">NR. 1 W PL Sprawdziany i Kartkówki NIZE</p>
+            <p class="text-gray-600">System do profesjonalnego zarządzania rankingiem opinii</p>
         </header>
 
-        <div id="login-card" class="card p-6 rounded-lg mb-10">
+        <div id="login-card" class="card p-6 rounded-lg mb-10 neon-border">
             <h2 class="text-2xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-800">Sekcja Administratora: Logowanie</h2>
             <form id="login-form" class="space-y-4">
                 <div>
@@ -91,7 +113,7 @@
             <p id="login-message" class="text-center mt-3 text-red-600 hidden">Nieprawidłowy login lub hasło.</p>
         </div>
 
-        <div id="add-personality-card" class="card p-6 rounded-lg mb-10 hidden">
+        <div id="add-personality-card" class="card p-6 rounded-lg mb-10 hidden neon-border">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-4">
                  <h2 class="text-2xl font-semibold text-gray-800">Dodaj Nową Osobę (Zalogowano)</h2>
                  <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-800 transition">Wyloguj</button>
@@ -100,11 +122,11 @@
             <form id="add-personality-form" class="space-y-4">
                 <div>
                     <label for="discord-nick" class="block text-sm font-medium text-gray-700 mb-1">Nick Discord</label>
-                    <input type="text" id="discord-nick" required placeholder="np. NIZE1" class="w-full p-3">
+                    <input type="text" id="discord-nick" required placeholder="np. UżytkownikFirmowy" class="w-full p-3">
                 </div>
                 <div>
                     <label for="tiktok-link" class="block text-sm font-medium text-gray-700 mb-1">Link do TikToka (URL)</label>
-                    <input type="url" id="tiktok-link" required placeholder="np. https://tiktok.com/@nize12" class="w-full p-3">
+                    <input type="url" id="tiktok-link" required placeholder="np. https://tiktok.com/@profilfirmowy" class="w-full p-3">
                 </div>
                 <button type="submit" id="add-button" class="w-full neon-btn font-bold py-3 px-4 rounded-md">
                     Dodaj Osobę
@@ -125,7 +147,7 @@
         </div>
         
         <div class="mt-8 p-4 bg-white border border-gray-300 border-l-4 rounded-md shadow-sm" style="border-left-color: var(--neon-purple);">
-            <p class="font-bold text-gray-700">Twój ID Użytkownika:</p>
+            <p class="font-bold text-gray-700">Twój ID Użytkownika (Anonimowy):</p>
             <p id="user-id-display" class="font-mono text-sm break-all text-gray-500"></p>
         </div>
 
@@ -355,6 +377,26 @@
             }
         };
 
+        const handleStarClick = (event, personalityId) => {
+            const star = event.target;
+            const ratingValue = parseInt(star.dataset.value);
+            const container = document.getElementById(`personality-${personalityId}`);
+            const stars = container.querySelectorAll('.star');
+            const saveBtn = container.querySelector('.save-rating-btn');
+            
+            stars.forEach((s, index) => {
+                if (index < ratingValue) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
+
+            saveBtn.dataset.rating = ratingValue;
+            saveBtn.disabled = false;
+        };
+
+
         const renderPersonalityItem = (personality, ratings) => {
             const { id, discordNick, tiktokLink } = personality;
             const container = document.createElement('div');
@@ -385,10 +427,9 @@
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div class="flex-shrink-0">
                             <span class="font-medium text-gray-700 block mb-2">Oceń dzisiaj:</span>
-                            <div class="star-rating" data-id="${id}">
-                                ${[5, 4, 3, 2, 1].map(i => `
-                                    <input type="radio" id="star-${id}-${i}" name="rating-${id}" value="${i}" />
-                                    <label for="star-${id}-${i}" class="text-3xl transition hover:scale-110 active:scale-95">★</label>
+                            <div class="star-rating flex text-3xl" data-id="${id}">
+                                ${[1, 2, 3, 4, 5].map(i => `
+                                    <span class="star" data-value="${i}">★</span>
                                 `).join('')}
                             </div>
                         </div>
@@ -416,16 +457,13 @@
             `;
 
             const saveBtn = container.querySelector('.save-rating-btn');
-            const ratingInputs = container.querySelectorAll(`input[name="rating-${id}"]`);
+            const starContainer = container.querySelector('.star-rating');
             const descriptionInput = container.querySelector(`#description-${id}`);
-
+            
             saveBtn.disabled = true;
 
-            ratingInputs.forEach(input => {
-                input.addEventListener('change', () => {
-                    saveBtn.dataset.rating = input.value;
-                    saveBtn.disabled = false;
-                });
+            starContainer.querySelectorAll('.star').forEach(star => {
+                star.addEventListener('click', (e) => handleStarClick(e, id));
             });
 
             saveBtn.addEventListener('click', () => {
@@ -434,7 +472,7 @@
                 
                 if (rating >= 1 && rating <= 5) {
                     saveRating(id, rating, description);
-                    ratingInputs.forEach(input => input.checked = false);
+                    starContainer.querySelectorAll('.star').forEach(s => s.classList.remove('selected'));
                     descriptionInput.value = '';
                     saveBtn.dataset.rating = null;
                     saveBtn.disabled = true;
@@ -448,7 +486,6 @@
 
         const loadPersonalities = () => {
             if (!isAuthReady) {
-                console.log("Próba ładowania danych przed gotowością autentykacji.");
                 return;
             }
 
