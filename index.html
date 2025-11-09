@@ -36,7 +36,7 @@
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">Ocena Medialnych</h1>
-            <p class="text-gray-600">Dane są zapisywane w czasie rzeczywistym.</p>
+            <p class="text-gray-600">Testy nr 1 NIZE PL</p>
         </header>
 
         <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
@@ -98,6 +98,7 @@
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
+        -
         const externalFirebaseConfig = {
              apiKey: "AIzaSyAAeQbCXt15Zjuf_sA1p0jRp_tSb8WSaNs",
              authDomain: "ocena-medialnych.firebaseapp.com",
@@ -105,15 +106,15 @@
              storageBucket: "ocena-medialnych.firebasestorage.app",
              messagingSenderId: "570287989991",
              appId: "1:570287989991:web:4c0594ab280515802dee42"
-            
+             
         };
-     
+        // ----------------------------------------------------------------
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' && Object.keys(JSON.parse(__firebase_config)).length > 0
             ? JSON.parse(__firebase_config)
             : externalFirebaseConfig;
 
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_token : null;
 
         let db;
         let auth;
@@ -131,6 +132,7 @@
                         await signInWithCustomToken(auth, initialAuthToken);
                         console.log("Zalogowano z custom tokenem.");
                     } else {
+                        // Używamy signInAnonymously do logowania na GitHubie/lokalnie
                         await signInAnonymously(auth);
                         console.log("Zalogowano anonimowo.");
                     }
@@ -150,6 +152,7 @@
                     userId = null;
                     isAuthReady = true;
                     console.log("Autentykacja nie powiodła się lub użytkownik wylogowany. Nie wczytano prywatnych danych.");
+                    // Ten komunikat jest widoczny, gdy autentykacja się nie powiedzie:
                     document.getElementById('user-id-display').textContent = 'Błąd autentykacji. Brak ID.';
                     document.getElementById('loading').textContent = 'Wymagane uprawnienia. Błąd autentykacji.';
                 }
@@ -186,15 +189,17 @@
             }
         };
 
-        const saveRating = async (personalityId, rating) => {
+        // Zaktualizowana funkcja do zapisywania oceny wraz z opisem
+        const saveRating = async (personalityId, rating, description) => {
             try {
                 const ratingsRef = getRatingsCollectionRef(personalityId);
                 await addDoc(ratingsRef, {
                     rating: rating,
+                    description: description, // Nowe pole
                     timestamp: serverTimestamp()
                 });
 
-                alertUser('Ocena (' + rating + ' gwiazdek) została zapisana!', 'success');
+                alertUser(`Ocena (${rating} gwiazdek) z opisem została zapisana!`, 'success');
             } catch (e) {
                 console.error("Błąd podczas zapisywania oceny: ", e);
                 alertUser('Wystąpił błąd podczas zapisywania oceny.', 'error');
@@ -262,27 +267,33 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div class="flex-shrink-0">
-                        <span class="font-medium text-gray-700 block mb-2">Oceń dzisiaj:</span>
-                        <div class="star-rating" data-id="${id}">
-                            ${[5, 4, 3, 2, 1].map(i => `
-                                <input type="radio" id="star-${id}-${i}" name="rating-${id}" value="${i}" />
-                                <label for="star-${id}-${i}" class="text-2xl transition hover:scale-110 active:scale-95">★</label>
-                            `).join('')}
+                <div class="flex flex-col gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-shrink-0">
+                            <span class="font-medium text-gray-700 block mb-2">Oceń dzisiaj:</span>
+                            <div class="star-rating" data-id="${id}">
+                                ${[5, 4, 3, 2, 1].map(i => `
+                                    <input type="radio" id="star-${id}-${i}" name="rating-${id}" value="${i}" />
+                                    <label for="star-${id}-${i}" class="text-2xl transition hover:scale-110 active:scale-95">★</label>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <label for="description-${id}" class="block text-sm font-medium text-gray-700 mb-1">Opis (opcjonalnie):</label>
+                            <textarea id="description-${id}" rows="2" placeholder="Wpisz krótki komentarz, np. 'Bardzo ciekawy ostatni film'." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                         </div>
                     </div>
-
-                    <div class="flex space-x-2 flex-shrink-0">
-                        <button data-id="${id}" class="save-rating-btn bg-green-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-green-600 transition duration-150 shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-end gap-2">
+                        <button data-id="${id}" class="save-rating-btn bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150 shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Zapisz Ocenę
                         </button>
-                        <button onclick="showHistory('${id}', '${discordNick}')" class="bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md flex items-center">
+                        <button onclick="showHistory('${id}', '${discordNick}')" class="bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md flex items-center justify-center w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Historia Ocen (${ratings.length})
                         </button>
-                        <button onclick="deletePersonality('${id}', '${discordNick}')" class="bg-red-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex items-center">
+                        <button onclick="deletePersonality('${id}', '${discordNick}')" class="bg-red-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex items-center justify-center w-full sm:w-auto">
                             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             Usuń
                         </button>
@@ -292,6 +303,9 @@
 
             const saveBtn = container.querySelector('.save-rating-btn');
             const ratingInputs = container.querySelectorAll(`input[name="rating-${id}"]`);
+            const descriptionInput = container.querySelector(`#description-${id}`);
+
+            saveBtn.disabled = true;
 
             ratingInputs.forEach(input => {
                 input.addEventListener('change', () => {
@@ -302,9 +316,17 @@
 
             saveBtn.addEventListener('click', () => {
                 const rating = parseInt(saveBtn.dataset.rating);
+                const description = descriptionInput.value.trim();
+                
                 if (rating >= 1 && rating <= 5) {
-                    saveRating(id, rating);
+                    saveRating(id, rating, description);
+                    // Możemy zresetować stan po zapisie
+                    ratingInputs.forEach(input => input.checked = false);
+                    descriptionInput.value = '';
+                    saveBtn.dataset.rating = null;
                     saveBtn.disabled = true;
+                } else {
+                    alertUser('Wybierz liczbę gwiazdek przed zapisem.', 'warning');
                 }
             });
 
@@ -338,7 +360,13 @@
                 } else {
                     noPersonalitiesElement.classList.add('hidden');
 
+                    // Mapowanie do śledzenia subskrypcji ocen, aby uniknąć duplikatów
+                    const activeRatingSubscriptions = new Set();
+                    
                     personalitiesData.forEach(personality => {
+                        if (activeRatingSubscriptions.has(personality.id)) return;
+                        activeRatingSubscriptions.add(personality.id);
+
                         const ratingsRef = query(getRatingsCollectionRef(personality.id));
                         onSnapshot(ratingsRef, (ratingsSnapshot) => {
                             const ratings = [];
@@ -419,15 +447,21 @@
                     const stars = '★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating);
 
                     const entry = document.createElement('div');
-                    entry.className = 'rating-entry bg-gray-50 p-3 rounded-lg flex justify-between items-center';
+                    entry.className = 'rating-entry bg-gray-50 p-3 rounded-lg flex flex-col space-y-2';
                     entry.innerHTML = `
-                        <div>
+                        <div class="flex justify-between items-start">
                             <span class="text-xl font-bold text-yellow-500">${stars}</span>
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-700">Ocena: ${rating.rating}/5</p>
+                                <p class="text-xs text-gray-500">${formattedDate}</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-sm font-medium text-gray-700">Ocena: ${rating.rating}/5</p>
-                            <p class="text-xs text-gray-500">${formattedDate}</p>
-                        </div>
+                        ${rating.description ? 
+                            `<div class="mt-2 p-2 bg-white rounded-md border border-gray-200">
+                                <p class="text-xs font-semibold text-gray-600">Opis:</p>
+                                <p class="text-sm text-gray-800 whitespace-pre-wrap">${rating.description}</p>
+                            </div>` 
+                            : ''}
                     `;
                     modalContent.appendChild(entry);
                 });
